@@ -1,0 +1,26 @@
+{
+  "name": "stopprocrastinatingpongateiro",
+  "version": "1.0.0",
+  "description": "pong",
+  "main": "p5.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "mocha": "^4.0.1"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sockateiros/stopprocrastinatingpongateiro.git"
+  },
+  "author": "pedro cordeiro",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Sockateiros/stopprocrastinatingpongateiro/issues"
+  },
+  "homepage": "https://github.com/Sockateiros/stopprocrastinatingpongateiro#readme"
+}
