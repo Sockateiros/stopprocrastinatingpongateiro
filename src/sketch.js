@@ -1,17 +1,21 @@
-var ballX = 200, ballY = 200;
+var ballX = 50, ballY = 200;
 var prevBallX = ballX, prevBallY = ballY;
-var ballVelX = 500, ballVelY = 500;
+var ballVelX = -300, ballVelY = 700;
 var ballWidth = 20;
 
 var dbgX = 200, dbgY = 200;
 var prevDbgX = 200, prevDbgY = 200;
 var dbgVelX = ballVelX, dbgVelY = ballVelY;
 
-var canvasWidth = 500, canvasHeight = 250;
+// Maximized
+var canvasWidth = window.screen.width * window.devicePixelRatio;
+var canvasHeight = window.screen.height * window.devicePixelRatio;
+
+// var canvasWidth = 500, canvasHeight = 250;
 
 var numCells = {x: canvasWidth / 50,
 				y: canvasHeight / 25};
-var minDist = 5;
+var minDist = 1;
 
 // Paddles
 var paddleWidth = 20, paddleHeight = 50;
@@ -24,6 +28,11 @@ var prevTs = 0;
 var deltaT = 0;
 
 var stop = false;
+
+var mousePressBall = {x: -1, y: -1, pressing: false};
+var mouseReleaseBall = {x: -1, y: -1};
+
+var dbgMode = 0;
 
 function drawBall() {
 	fill(255, 0, 0);
@@ -54,6 +63,11 @@ function moveBall(ts) {
 	var pos = ballDistanceInTime(ts); 
 	ballX += pos.x
 	ballY += pos.y;
+}
+
+function setSliderValues(vx, vy) {
+	vxSlider.setValue(vx);
+	vySlider.setValue(vy);
 }
 
 function collideWithWalls() {
@@ -100,6 +114,101 @@ function collidesWithWalls() {
 	return false;
 }
 
+function reflectBallOnPaddle(intersection) {
+	var horizontalColisionArea = Math.min(Math.abs(intersection.right), 
+		Math.abs(intersection.left));
+
+	var verticalColisionArea = Math.min(Math.abs(intersection.top), 
+		Math.abs(intersection.bottom));
+
+	// Vertical surface reflection
+	if (horizontalColisionArea <= verticalColisionArea) {
+		ballVelX *= -1;
+	}
+	else {
+		// Horizontal surface reflection
+		ballVelY *= -1;
+	}
+}
+
+function reflectDbgOnPaddle(intersection) {
+	var horizontalColisionArea = Math.min(Math.abs(intersection.right), 
+		Math.abs(intersection.left));
+
+	var verticalColisionArea = Math.min(Math.abs(intersection.top), 
+		Math.abs(intersection.bottom));
+
+	// Vertical surface reflection
+	if (horizontalColisionArea <= verticalColisionArea) {
+		dbgVelX *= -1;
+	}
+	else {
+		// Horizontal surface reflection
+		dbgVelY *= -1;
+	}
+}
+
+function collideWithPaddles() {
+	var rBallIntersect = ballX + ballWidth - (paddleLX);
+	if (rBallIntersect <= 0) {
+		return false;
+	}
+	var lBallIntersect = ballX - (paddleLX + paddleWidth);
+	if (lBallIntersect >= 0) {
+		return false;
+	}
+	var tBallIntersect = ballY - (paddleLY + paddleHeight);
+	if (tBallIntersect >= 0) {
+		return false;
+	}
+	var bBallIntersect = ballY + ballWidth - (paddleLY);
+	if (bBallIntersect <= 0) {
+		return false;
+	}
+	
+	// paddleLY = paddleLY;
+	// ball.position = Object.assign({}, ball.oldPosition);
+
+	// Arriving here means the ball collided with a paddle
+	reflectBallOnPaddle( 
+		{right: rBallIntersect,
+		left: lBallIntersect,
+		top: tBallIntersect,
+		bottom: bBallIntersect
+	});
+
+	return true;
+}
+
+function collidesWithPaddles() {
+	var rBallIntersect = dbgX + ballWidth - (paddleLX);
+	if (rBallIntersect <= 0) {
+		return false;
+	}
+	var lBallIntersect = dbgX - (paddleLX + paddleWidth);
+	if (lBallIntersect >= 0) {
+		return false;
+	}
+	var tBallIntersect = dbgY - (paddleLY + paddleHeight);
+	if (tBallIntersect >= 0) {
+		return false;
+	}
+	var bBallIntersect = dbgY + ballWidth - (paddleLY);
+	if (bBallIntersect <= 0) {
+		return false;
+	}
+	
+	// Arriving here means the ball collided with a paddle
+	reflectDbgOnPaddle( 
+		{right: rBallIntersect,
+		left: lBallIntersect,
+		top: tBallIntersect,
+		bottom: bBallIntersect
+	});
+
+	return true;
+}
+
 function nextEndingPosition(currentPos, speed, ts) {
 	var nextPos = distanceInTime(speed, ts);
 	return {x: nextPos.x + currentPos.x, y: nextPos.y + currentPos.y};
@@ -122,7 +231,8 @@ function collide(ts) {
 	var numCollisionChecks = floor(distToNextPos / minDist) + 1;
 
 	for (var i = 0; i < numCollisionChecks; i++) {
-		if (collideWithWalls()) {
+		if (collideWithWalls() || collideWithPaddles()) {
+
 			ballX = prevBallX;
 			ballY = prevBallY;
 
@@ -166,7 +276,7 @@ function visualDbg(ts) {
 
 	for (var i = 0; i < numCollisionChecks; i++) {
 
-		if (collidesWithWalls()) {
+		if (collidesWithWalls() || collidesWithPaddles()) {
 			// stop = true;
 
 			// Go to previous position
@@ -182,6 +292,8 @@ function visualDbg(ts) {
 
 			stroke(255);
 			line(collX, collY, dbgX, dbgY);
+			stroke(0, 255, 255);
+			line(collX, collY + ballWidth, dbgX, dbgY + ballWidth);
 
 			collX = dbgX;
 			collY = dbgY;
@@ -199,15 +311,107 @@ function visualDbg(ts) {
 
 	stroke(255);
 	line(collX, collY, dbgX, dbgY);
+	stroke(0, 255, 255);
+	line(collX, collY + ballWidth, dbgX, dbgY + ballWidth);
 }
 
+// Obj: {x, y, w, h}
+function mouseInObj(obj) {
+	return mouseX > obj.x && mouseX < obj.x + obj.w && mouseY > obj.y && mouseY < obj.y + obj.h;
+}
+
+function changeBallSpeed(newSpeed) {
+	ballVelX = newSpeed.x;
+	ballVelY = newSpeed.y;
+}
+
+function checkDbgInteraction(kCode) {
+	if (kCode > 50 || kCode < 48) {
+		return false;
+	}
+	dbgMode = kCode - 48;
+	
+	return true;
+}
+
+function drawDbgMenu() {
+	fill(255);
+
+	textSize(32);
+	text("Debug Menu", 100, 100);
+
+	textSize(22);
+	text("0 - Reset", 100, 140);
+
+	textSize(22);
+	text("1 - Set Ball Vel", 100, 180);
+
+	textSize(22);
+	text("SPACEBAR - Start / Resume", 100, 220);
+}
+
+function dbgSaveInitialMousePos() {	
+	var ballObj = {x: ballX, y: ballY, w: ballWidth, h: ballWidth}; 
+	if (mouseInObj(ballObj)) {
+		mousePressBall.pressing = true;
+		mousePressBall.x = mouseX;
+		mousePressBall.y = mouseY;
+	}
+}
+
+function dbgSaveFinalMousePos() {
+	if (mousePressBall.pressing === true) {
+		mousePressBall.pressing = false;
+		mouseReleaseBall.x = mouseX;
+		mouseReleaseBall.y = mouseY;
+
+		newSpeed = {x: mouseReleaseBall.x - mousePressBall.x,
+					y: mouseReleaseBall.y - mousePressBall.y};
+
+		changeBallSpeed(newSpeed);
+	}
+}
+
+//
+// P5 built-in functions
+//
+
 function keyPressed() {
-	if (keyCode === LEFT_ARROW) {
-		stop = true;
+	if (keyCode === 32) { // Spacebar
+		stop = !stop;
+		if (stop === false) {
+			prevTs = new Date().getTime();
+		}
 	} 
-	else if (keyCode === RIGHT_ARROW) {
-		stop = false;
-		prevTs = new Date().getTime();
+
+	if (stop) {
+		checkDbgInteraction(keyCode);
+	}
+
+	return false;
+}
+
+function mousePressed() {
+	if (stop === false) {
+		return false;
+	}
+	
+	if (dbgMode === 1) {
+		console.log('mousePressed');
+		dbgSaveInitialMousePos();
+	}
+	
+	return false;
+}
+
+function mouseReleased() { 
+	if (stop === false) {
+		return false;
+	}
+	
+	if (dbgMode === 1) {
+		console.log('mouseReleased');
+		dbgSaveFinalMousePos();
 	}
 
 	return false;
@@ -215,29 +419,26 @@ function keyPressed() {
 
 function setup() {
 	// Maximized
-	//createCanvas(window.screen.width * window.devicePixelRatio, window.screen.height * window.devicePixelRatio);
-	// frameRate(10);
 	createCanvas(canvasWidth, canvasHeight);
 	prevTs = new Date().getTime();
 }
 
 function draw() {
+	background(0);
 	if (stop === false) {
-		background(0);
-
 		calcDeltaT();
-
-		paddleLY = constrain(mouseY, paddleHeight/2, canvasHeight - paddleHeight/2);
-		
-		collide(deltaT);
-		
-		// moveBall(deltaT);
-
-		drawBall();
-		drawPaddles();
-
-		// visualDbg(1000);
 	}
+	paddleLY = constrain(mouseY, paddleHeight/2, canvasHeight - paddleHeight/2);
+
+	if (stop === false) {
+		collide(deltaT);	
+		// moveBall(deltaT);
+	}
+	drawBall();
+	drawPaddles();
+	visualDbg(1000);
+
+	drawDbgMenu();
 }
 
 module.exports = {
