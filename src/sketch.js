@@ -33,6 +33,7 @@ var mousePressBall = {x: -1, y: -1, pressing: false};
 var mouseReleaseBall = {x: -1, y: -1};
 
 var dbgMode = 0;
+var showDbgMenu = true;
 
 function drawBall() {
 	fill(255, 0, 0);
@@ -326,7 +327,7 @@ function changeBallSpeed(newSpeed) {
 }
 
 function checkDbgInteraction(kCode) {
-	if (kCode > 50 || kCode < 48) {
+	if (kCode > 51 || kCode < 48) {
 		return false;
 	}
 	dbgMode = kCode - 48;
@@ -334,20 +335,33 @@ function checkDbgInteraction(kCode) {
 	return true;
 }
 
+function changeDbgMenuEntryColor(mode) {
+	if (dbgMode === mode) {
+		return color(0, 255, 255);
+	}
+	return color(255);
+}
+
 function drawDbgMenu() {
 	fill(255);
 
 	textSize(32);
-	text("Debug Menu", 100, 100);
+	text("Debug Menu (stop game to use)", 100, 100);
 
 	textSize(22);
-	text("0 - Reset", 100, 140);
+	fill(changeDbgMenuEntryColor(0));
+	text("0 --- Reset", 100, 140);
 
-	textSize(22);
-	text("1 - Set Ball Vel", 100, 180);
+	fill(changeDbgMenuEntryColor(1));
+	text("1 --- Set Ball Vel", 100, 180);
 
-	textSize(22);
-	text("SPACEBAR - Start / Resume", 100, 220);
+	fill(changeDbgMenuEntryColor(2));
+	text("2 --- Drag n Drop Ball", 100, 220);
+
+	fill(255);
+	text("SPACEBAR --- Start / Resume", 100, 260);
+
+	text("ENTER --- Hide / Show Debug Menu", 100, 300);	
 }
 
 function dbgSaveInitialMousePos() {	
@@ -365,10 +379,18 @@ function dbgSaveFinalMousePos() {
 		mouseReleaseBall.x = mouseX;
 		mouseReleaseBall.y = mouseY;
 
-		newSpeed = {x: mouseReleaseBall.x - mousePressBall.x,
-					y: mouseReleaseBall.y - mousePressBall.y};
+		if (dbgMode === 1) {
+			newSpeed = {x: mouseReleaseBall.x - mousePressBall.x,
+						y: mouseReleaseBall.y - mousePressBall.y};
 
-		changeBallSpeed(newSpeed);
+			changeBallSpeed(newSpeed);
+			console.log("there there");
+		}
+		else if (dbgMode === 2) {
+			console.log("here here");
+			ballX = mouseX;
+			ballY = mouseY;
+		}
 	}
 }
 
@@ -384,6 +406,10 @@ function keyPressed() {
 		}
 	} 
 
+	if (keyCode === 13) {// Enter
+		showDbgMenu = !showDbgMenu;
+	}
+
 	if (stop) {
 		checkDbgInteraction(keyCode);
 	}
@@ -396,7 +422,7 @@ function mousePressed() {
 		return false;
 	}
 	
-	if (dbgMode === 1) {
+	if (dbgMode === 1 || dbgMode === 2) {
 		console.log('mousePressed');
 		dbgSaveInitialMousePos();
 	}
@@ -409,7 +435,7 @@ function mouseReleased() {
 		return false;
 	}
 	
-	if (dbgMode === 1) {
+	if (dbgMode === 1 || dbgMode === 2) {
 		console.log('mouseReleased');
 		dbgSaveFinalMousePos();
 	}
@@ -438,7 +464,9 @@ function draw() {
 	drawPaddles();
 	visualDbg(1000);
 
-	drawDbgMenu();
+	if (showDbgMenu) {
+		drawDbgMenu();
+	}
 }
 
 module.exports = {
