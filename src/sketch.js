@@ -1,6 +1,6 @@
-var ballX = 50, ballY = 200;
+var ballX = 250, ballY = 200;
 var prevBallX = ballX, prevBallY = ballY;
-var ballVelX = -300, ballVelY = 700;
+var ballVelX = -100, ballVelY = 0;
 var ballWidth = 20;
 
 var dbgX = 200, dbgY = 200;
@@ -152,7 +152,9 @@ function collidesWithWalls() {
 	return false;
 }
 
-function reflectBallOnPaddle(intersection) {
+// Reflects an object in a paddle.
+// obj: {x, y, w, h, velX, velY}
+function reflectOnPaddle(intersection, obj) {
 	var horizontalColisionArea = Math.min(Math.abs(intersection.right), 
 		Math.abs(intersection.left));
 
@@ -160,50 +162,41 @@ function reflectBallOnPaddle(intersection) {
 		Math.abs(intersection.bottom));
 
 	var thickness = 2;
+	var newObj = {x: obj.x, y: obj.y, velX: obj.velX, velY: obj.velY};
 
 	// Vertical surface reflection
 	if (horizontalColisionArea <= verticalColisionArea) {
 		// Collided with left surface
 		if (ballX < paddleLX) {
 			setCollidedSurface(paddleLX - thickness, paddleLY, thickness, paddleHeight);
+			newObj.velX = Math.abs(obj.velX) * -1;
+			newObj.x = paddleLX - obj.w - 1;
 		}
 		// Collided with right surface
 		else {
 			setCollidedSurface(paddleLX + paddleWidth, paddleLY, thickness, paddleHeight);
+			newObj.velX = Math.abs(obj.velX);
+			newObj.x = paddleLX + paddleWidth + 1;
 		}
-		ballVelX *= -1;
 	}
-
 
 	// Horizontal surface reflection
 	else {
 		// Collided with top
 		if (ballY < paddleLY) {
 			setCollidedSurface(paddleLX, paddleLY - thickness, paddleWidth, thickness);
+			newObj.velY = Math.abs(obj.velY) * -1;
+			newObj.y = paddleLY - obj.h - 1;
 		}
 		// Collided with bottom
 		else  {
 			setCollidedSurface(paddleLX, paddleLY + paddleHeight, paddleWidth, thickness);
+			newObj.velY = Math.abs(obj.velY);
+			newObj.y = paddleLY + paddleHeight + 1;
 		}
-		ballVelY *= -1;
 	}
-}
 
-function reflectDbgOnPaddle(intersection) {
-	var horizontalColisionArea = Math.min(Math.abs(intersection.right), 
-		Math.abs(intersection.left));
-
-	var verticalColisionArea = Math.min(Math.abs(intersection.top), 
-		Math.abs(intersection.bottom));
-
-	// Vertical surface reflection
-	if (horizontalColisionArea <= verticalColisionArea) {
-		dbgVelX *= -1;
-	}
-	else {
-		// Horizontal surface reflection
-		dbgVelY *= -1;
-	}
+	return newObj;
 }
 
 function collideWithPaddles() {
@@ -225,12 +218,23 @@ function collideWithPaddles() {
 	}
 	
 	// Arriving here means the ball collided with a paddle
-	reflectBallOnPaddle( 
-		{right: rBallIntersect,
-		left: lBallIntersect,
-		top: tBallIntersect,
-		bottom: bBallIntersect
-	});
+	var obj = {x: ballX, y: ballY, w: ballWidth, h: ballWidth, velX: ballVelX, velY: ballVelY};
+	var newObj = reflectOnPaddle( 
+		{	right: rBallIntersect,
+			left: lBallIntersect,
+			top: tBallIntersect,
+			bottom: bBallIntersect
+		},	obj
+		);
+
+	// ballX = newObj.x;
+	// ballY = newObj.y;
+	ballVelX = newObj.velX;
+	ballVelY = newObj.velY;
+	prevBallX = newObj.x;
+	prevBallY = newObj.y;
+	// prevBallX = canvasWidth / 2;
+	// prevBallY = canvasHeight / 2;
 
 	return true;
 }
@@ -253,14 +257,23 @@ function collidesWithPaddles() {
 		return false;
 	}
 	
-	// Arriving here means the ball collided with a paddle
-	reflectDbgOnPaddle( 
-		{right: rBallIntersect,
-		left: lBallIntersect,
-		top: tBallIntersect,
-		bottom: bBallIntersect
-	});
+	// Arriving here means the dbg line collided with a paddle
+	var obj = {x: dbgX, y: dbgY, w: ballWidth, h: ballWidth, velX: dbgVelX, velY: dbgVelY};
+	var newObj = reflectOnPaddle( 
+		{	right: rBallIntersect,
+			left: lBallIntersect,
+			top: tBallIntersect,
+			bottom: bBallIntersect
+		},	obj
+		);
 
+	// dbgX = newObj.x;
+	// dbgY = newObj.y;
+	dbgVelX = newObj.velX;
+	dbgVelY = newObj.velY;
+	prevDbgX = newObj.x;
+	prevDbgY = newObj.y;
+	
 	return true;
 }
 
@@ -284,19 +297,14 @@ function collide(ts) {
 
 	var distToNextPos = sqrt((nextPos.x - ballX)**2 + (nextPos.y - ballY)**2);
 	var numCollisionChecks = floor(distToNextPos / minDist) + 1;
-
+	var tsPerCollision = ts / numCollisionChecks;
 	for (var i = 0; i < numCollisionChecks; i++) {
 		if (collideWithWalls() || collideWithPaddles()) {
-
 			ballX = prevBallX;
 			ballY = prevBallY;
 
-			// Distance to next position
-			var d = sqrt((nextPos.x - ballX)**2 + (nextPos.y - ballY)**2);
-
-			var partialTs = ts * (d / distToNextPos);
+			var partialTs = (numCollisionChecks - i) * tsPerCollision;
 			nextPos = nextEndingPosition({x: ballX, y: ballY}, {x: ballVelX, y: ballVelY}, partialTs);
-
 			i--;
 		}
 
@@ -328,7 +336,7 @@ function visualDbg(ts) {
 
 	var distToNextPos = sqrt((nextPos.x - dbgX)**2 + (nextPos.y - dbgY)**2);
 	var numCollisionChecks = floor(distToNextPos / minDist) + 1;
-
+	var tsPerCollision = ts / numCollisionChecks;
 	for (var i = 0; i < numCollisionChecks; i++) {
 
 		if (collidesWithWalls() || collidesWithPaddles()) {
@@ -337,11 +345,7 @@ function visualDbg(ts) {
 			// Go to previous position
 			dbgX = prevDbgX;
 			dbgY = prevDbgY;
-
-			// Distance to next position
-			var d = sqrt((nextPos.x - dbgX)**2 + (nextPos.y - dbgY)**2);
-
-			var partialTs = ts * (d / distToNextPos);
+			var partialTs = (numCollisionChecks - i) * tsPerCollision;
 
 			nextPos = nextEndingPosition({x: dbgX, y: dbgY}, {x: dbgVelX, y: dbgVelY}, partialTs);
 
@@ -509,6 +513,7 @@ function setup() {
 	prevTs = new Date().getTime();
 }
 
+// Main loop
 function draw() {
 	background(0);
 	if (stop === false) {
