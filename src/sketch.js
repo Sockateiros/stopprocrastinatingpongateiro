@@ -8,10 +8,10 @@ var prevDbgX = 200, prevDbgY = 200;
 var dbgVelX = ballVelX, dbgVelY = ballVelY;
 
 // Maximized
-var canvasWidth = window.screen.width * window.devicePixelRatio;
-var canvasHeight = window.screen.height * window.devicePixelRatio;
+// var canvasWidth = window.screen.width * window.devicePixelRatio;
+// var canvasHeight = window.screen.height * window.devicePixelRatio;
 
-// var canvasWidth = 500, canvasHeight = 250;
+var canvasWidth = 800, canvasHeight = 450;
 
 var numCells = {x: canvasWidth / 50,
 				y: canvasHeight / 25};
@@ -34,6 +34,7 @@ var mouseReleaseBall = {x: -1, y: -1};
 
 var dbgMode = 0;
 var showDbgMenu = true;
+var collidedSurface = {x1: -10, y1: -10, x2: -10, y2: -10};
 
 function drawBall() {
 	fill(255, 0, 0);
@@ -71,20 +72,56 @@ function setSliderValues(vx, vy) {
 	vySlider.setValue(vy);
 }
 
+function highlightCollisionSurface() {
+	if (collidedSurface.x1 === -10 || collidedSurface.x2 === -10 || collidedSurface.y1 === -10 || collidedSurface.y2 === -10) {
+		return;
+	}
+	fill(255, 0, 0);
+	rect(collidedSurface.x1, collidedSurface.y1, collidedSurface.x2, collidedSurface.y2);
+	noFill();
+}
+
+function setCollidedSurface(x1, y1, x2, y2) {
+		collidedSurface.x1 = x1;
+		collidedSurface.x2 = x2;
+		collidedSurface.y1 = y1;
+		collidedSurface.y2 = y2;
+}
+
 function collideWithWalls() {
-	// Collide with left or right walls
-	if (ballX + ballWidth > canvasWidth || ballX < 0) {
+	var collided = false;
+
+	var thickness = 2;
+	// Collide with right wall
+	if (ballX + ballWidth > canvasWidth) {
+		setCollidedSurface(canvasWidth - thickness, 0, thickness, canvasHeight);
+
 		ballVelX *= -1;
-		return true;
+		collided = true;
 	}
+	// Collide with left wall
+	if (ballX < 0) {
+		setCollidedSurface(0, 0, thickness, canvasHeight);
 
-	// Collide with top or bottom walls
-	if (ballY < 0 || ballY + ballWidth > canvasHeight) {
+		ballVelX *= -1;
+		collided = true;		
+	}
+	// Collide with top wall
+	if (ballY < 0) {
+		setCollidedSurface(0, 0, canvasWidth, thickness);
+
 		ballVelY *= -1;
-		return true;
+		collided = true;
+	}
+	// Collide with bottom wall
+	if (ballY + ballWidth > canvasHeight) {
+		setCollidedSurface(0, canvasHeight - thickness, canvasWidth, thickness);
+
+		ballVelY *= -1;
+		collided = true;
 	}
 
-	return false;
+	return collided;
 }
 
 function drawPaddles() {
@@ -122,12 +159,32 @@ function reflectBallOnPaddle(intersection) {
 	var verticalColisionArea = Math.min(Math.abs(intersection.top), 
 		Math.abs(intersection.bottom));
 
+	var thickness = 2;
+
 	// Vertical surface reflection
 	if (horizontalColisionArea <= verticalColisionArea) {
+		// Collided with left surface
+		if (ballX < paddleLX) {
+			setCollidedSurface(paddleLX - thickness, paddleLY, thickness, paddleHeight);
+		}
+		// Collided with right surface
+		else {
+			setCollidedSurface(paddleLX + paddleWidth, paddleLY, thickness, paddleHeight);
+		}
 		ballVelX *= -1;
 	}
+
+
+	// Horizontal surface reflection
 	else {
-		// Horizontal surface reflection
+		// Collided with top
+		if (ballY < paddleLY) {
+			setCollidedSurface(paddleLX, paddleLY - thickness, paddleWidth, thickness);
+		}
+		// Collided with bottom
+		else  {
+			setCollidedSurface(paddleLX, paddleLY + paddleHeight, paddleWidth, thickness);
+		}
 		ballVelY *= -1;
 	}
 }
@@ -167,9 +224,6 @@ function collideWithPaddles() {
 		return false;
 	}
 	
-	// paddleLY = paddleLY;
-	// ball.position = Object.assign({}, ball.oldPosition);
-
 	// Arriving here means the ball collided with a paddle
 	reflectBallOnPaddle( 
 		{right: rBallIntersect,
@@ -295,6 +349,7 @@ function visualDbg(ts) {
 			line(collX, collY, dbgX, dbgY);
 			stroke(0, 255, 255);
 			line(collX, collY + ballWidth, dbgX, dbgY + ballWidth);
+			noStroke();
 
 			collX = dbgX;
 			collY = dbgY;
@@ -314,6 +369,13 @@ function visualDbg(ts) {
 	line(collX, collY, dbgX, dbgY);
 	stroke(0, 255, 255);
 	line(collX, collY + ballWidth, dbgX, dbgY + ballWidth);
+	noStroke();
+
+	// Drawings
+	highlightCollisionSurface();
+	if (showDbgMenu) {
+		drawDbgMenu();
+	}
 }
 
 // Obj: {x, y, w, h}
@@ -384,10 +446,8 @@ function dbgSaveFinalMousePos() {
 						y: mouseReleaseBall.y - mousePressBall.y};
 
 			changeBallSpeed(newSpeed);
-			console.log("there there");
 		}
 		else if (dbgMode === 2) {
-			console.log("here here");
 			ballX = mouseX;
 			ballY = mouseY;
 		}
@@ -463,10 +523,6 @@ function draw() {
 	drawBall();
 	drawPaddles();
 	visualDbg(1000);
-
-	if (showDbgMenu) {
-		drawDbgMenu();
-	}
 }
 
 module.exports = {
