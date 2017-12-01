@@ -36,6 +36,8 @@ var dbgMode = 0;
 var showDbgMenu = true;
 var collidedSurface = {x1: -10, y1: -10, x2: -10, y2: -10};
 
+var minDistSlider;
+
 function drawBall() {
 	fill(255, 0, 0);
 	rect(ballX, ballY, ballWidth, ballWidth);
@@ -425,9 +427,11 @@ function drawDbgMenu() {
 	text("2 --- Drag n Drop Ball", 100, 220);
 
 	fill(255);
-	text("SPACEBAR --- Start / Resume", 100, 260);
+	text("Min Collision Dist (currently: " + minDistSlider.value() + ")", 100, 260);
 
-	text("ENTER --- Hide / Show Debug Menu", 100, 300);	
+	text("SPACEBAR --- Start / Resume", 100, 300);
+
+	text("ENTER --- Hide / Show Debug Menu", 100, 340);	
 }
 
 function dbgSaveInitialMousePos() {	
@@ -490,8 +494,6 @@ function mousePressed() {
 		console.log('mousePressed');
 		dbgSaveInitialMousePos();
 	}
-	
-	return false;
 }
 
 function mouseReleased() { 
@@ -508,14 +510,18 @@ function mouseReleased() {
 }
 
 function setup() {
-	// Maximized
 	createCanvas(canvasWidth, canvasHeight);
 	prevTs = new Date().getTime();
+
+	minDistSlider = createSlider(1, 100, 20);
+	minDistSlider.position(100, 260);
 }
 
 // Main loop
 function draw() {
 	background(0);
+	minDist = minDistSlider.value();
+
 	if (stop === false) {
 		calcDeltaT();
 	}
