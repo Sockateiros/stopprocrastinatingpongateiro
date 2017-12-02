@@ -3,20 +3,10 @@ var ballPrevX = ballX, ballPrevY = ballY;
 var ballVelX = -100, ballVelY = 0;
 var ballWidth = 20;
 
-var balls = [	{x: 250, y: 200, prevX: 250, prevY: 200, velX: -100, velY: -10}
+var balls = [	{	x: 250, y: 200, prevX: 250, prevY: 200, velX: -100, velY: -10,
+					dbgX: 200, dbgY: 200, prevDbgX: 200, prevDbgY: 200, dbgVelX: -100, dbgVelY: -10	
+				}
 			];
-
-// Replacements:
-// ballX 		balls[0].x
-// ballY 		balls[0].y
-// ballPrevX	balls[0].prevX
-// ballPrevY	balls[0].prevY
-// ballVelX		balls[0].velX 
-// ballVelY		balls[0].velY
-
-var dbgX = 200, dbgY = 200;
-var prevDbgX = 200, prevDbgY = 200;
-var dbgVelX = balls[0].velX, dbgVelY = balls[0].velY;
 
 // Maximized
 // var canvasWidth = window.screen.width * window.devicePixelRatio;
@@ -40,7 +30,7 @@ var deltaT = 0;
 
 var stop = false;
 
-var mousePressBall = {x: -1, y: -1, pressing: false};
+var mousePressBall = {x: -1, y: -1, pressing: false, ballIdx: -1};
 var mouseReleaseBall = {x: -1, y: -1};
 
 var dbgMode = 0;
@@ -58,34 +48,10 @@ function drawBalls() {
 }
 
 // Determines the distance made by the ball in <ts> seconds
-function ballDistanceInTime(ts) {
-	return {x: balls[0].velX * ts * .001,
-			y: balls[0].velY * ts * .001
-			};
-}
-
-// Determines the distance made by the ball in <ts> seconds
 function distanceInTime(speed, ts) {
 	return {x: speed.x * ts * .001,
 			y: speed.y * ts * .001
 			};
-}
-
-function moveDbg(ts) {
-	var pos = dbgDistanceInTime(ts); 
-	dbgX += pos.x
-	dbgY += pos.y;	
-}
-
-function moveBall(ts) {
-	var pos = ballDistanceInTime(ts); 
-	balls[0].x += pos.x
-	balls[0].y += pos.y;
-}
-
-function setSliderValues(vx, vy) {
-	vxSlider.setValue(vx);
-	vySlider.setValue(vy);
 }
 
 function highlightCollisionSurface() {
@@ -153,16 +119,16 @@ function calcDeltaT() {
 	prevTs = ts;
 }
 
-function collidesWithWalls() {
+function collidesWithWalls(ballIdx) {
 	// Collide with left or right walls
-	if (dbgX + ballWidth > canvasWidth || dbgX < 0) {
-		dbgVelX *= -1;
+	if (balls[ballIdx].dbgX + ballWidth > canvasWidth || balls[ballIdx].dbgX < 0) {
+		balls[ballIdx].dbgVelX *= -1;
 		return true;
 	}
 
 	// Collide with top or bottom walls
-	if (dbgY < 0 || dbgY + ballWidth > canvasHeight) {
-		dbgVelY *= -1;
+	if (balls[ballIdx].dbgY < 0 || balls[ballIdx].dbgY + ballWidth > canvasHeight) {
+		balls[ballIdx].dbgVelY *= -1;
 		return true;
 	}
 
@@ -184,7 +150,7 @@ function reflectOnPaddle(intersection, obj, ballIdx) {
 	// Vertical surface reflection
 	if (horizontalColisionArea <= verticalColisionArea) {
 		// Collided with left surface
-		if (balls[ballIdx].x < paddleLX) {
+		if (obj.x < paddleLX) {
 			setCollidedSurface(paddleLX - thickness, paddleLY, thickness, paddleHeight);
 			newObj.velX = Math.abs(obj.velX) * -1;
 			newObj.x = paddleLX - obj.w - 1;
@@ -200,7 +166,7 @@ function reflectOnPaddle(intersection, obj, ballIdx) {
 	// Horizontal surface reflection
 	else {
 		// Collided with top
-		if (balls[ballIdx].y < paddleLY) {
+		if (obj.y < paddleLY) {
 			setCollidedSurface(paddleLX, paddleLY - thickness, paddleWidth, thickness);
 			newObj.velY = Math.abs(obj.velY) * -1;
 			newObj.y = paddleLY - obj.h - 1;
@@ -245,52 +211,46 @@ function collideWithPaddles(ballIdx) {
 		},	obj, ballIdx
 		);
 
-	// balls[0].x = newObj.x;
-	// balls[0].y = newObj.y;
 	balls[ballIdx].velX = newObj.velX;
 	balls[ballIdx].velY = newObj.velY;
 	balls[ballIdx].prevX = newObj.x;
 	balls[ballIdx].prevY = newObj.y;
-	// balls[0].prevX = canvasWidth / 2;
-	// balls[0].prevY = canvasHeight / 2;
 
 	return true;
 }
 
-function collidesWithPaddles() {
-	var rBallIntersect = dbgX + ballWidth - (paddleLX);
+function collidesWithPaddles(ballIdx) {
+	var rBallIntersect = balls[ballIdx].dbgX + ballWidth - (paddleLX);
 	if (rBallIntersect <= 0) {
 		return false;
 	}
-	var lBallIntersect = dbgX - (paddleLX + paddleWidth);
+	var lBallIntersect = balls[ballIdx].dbgX - (paddleLX + paddleWidth);
 	if (lBallIntersect >= 0) {
 		return false;
 	}
-	var tBallIntersect = dbgY - (paddleLY + paddleHeight);
+	var tBallIntersect = balls[ballIdx].dbgY - (paddleLY + paddleHeight);
 	if (tBallIntersect >= 0) {
 		return false;
 	}
-	var bBallIntersect = dbgY + ballWidth - (paddleLY);
+	var bBallIntersect = balls[ballIdx].dbgY + ballWidth - (paddleLY);
 	if (bBallIntersect <= 0) {
 		return false;
 	}
 	
 	// Arriving here means the dbg line collided with a paddle
-	var obj = {x: dbgX, y: dbgY, w: ballWidth, h: ballWidth, velX: dbgVelX, velY: dbgVelY};
+	var obj = {x: balls[ballIdx].dbgX, y: balls[ballIdx].dbgY, w: ballWidth, h: ballWidth, velX: balls[ballIdx].dbgVelX, velY: balls[ballIdx].dbgVelY};
 	var newObj = reflectOnPaddle( 
 		{	right: rBallIntersect,
 			left: lBallIntersect,
 			top: tBallIntersect,
 			bottom: bBallIntersect
-		},	obj
+		},	obj, ballIdx
 		);
 
-	// dbgX = newObj.x;
-	// dbgY = newObj.y;
-	dbgVelX = newObj.velX;
-	dbgVelY = newObj.velY;
-	prevDbgX = newObj.x;
-	prevDbgY = newObj.y;
+	balls[ballIdx].dbgVelX = newObj.velX;
+	balls[ballIdx].dbgVelY = newObj.velY;
+	balls[ballIdx].prevDbgX = newObj.x;
+	balls[ballIdx].prevDbgY = newObj.y;
 	
 	return true;
 }
@@ -341,67 +301,70 @@ function collide(ts) {
 
 function visualDbg(ts) {
 
-	dbgX = balls[0].x;
-	dbgY = balls[0].y;
-	dbgVelX = balls[0].velX;
-	dbgVelY = balls[0].velY;
-	prevDbgX = dbgX;
-	prevDbgY = dbgY;
+	for (var i = 0; i < balls.length; i++) {
 
-	var collX = dbgX;
-	var collY = dbgY;
+		balls[i].dbgX = balls[i].x;
+		balls[i].dbgY = balls[i].y;
+		balls[i].dbgVelX = balls[i].velX;
+		balls[i].dbgVelY = balls[i].velY;
+		balls[i].prevDbgX = balls[i].dbgX;
+		balls[i].prevDbgY = balls[i].dbgY;
 
-	var nextPos = nextEndingPosition({x: dbgX, y: dbgY}, {x: dbgVelX, y: dbgVelY}, ts);
-	var nextMinPos = nextMinPosition(nextPos, {x: dbgX, y: dbgY}, minDist);
+		var collX = balls[i].dbgX;
+		var collY = balls[i].dbgY;
 
-	var distToNextPos = sqrt((nextPos.x - dbgX)**2 + (nextPos.y - dbgY)**2);
-	var numCollisionChecks = floor(distToNextPos / minDist) + 1;
-	var tsPerCollision = ts / numCollisionChecks;
-	for (var i = 0; i < numCollisionChecks; i++) {
+		var nextPos = nextEndingPosition({x: balls[i].dbgX, y: balls[i].dbgY}, {x: balls[i].dbgVelX, y: balls[i].dbgVelY}, ts);
+		var nextMinPos = nextMinPosition(nextPos, {x: balls[i].dbgX, y: balls[i].dbgY}, minDist);
 
-		if (collidesWithWalls() || collidesWithPaddles()) {
-			// stop = true;
+		var distToNextPos = sqrt((nextPos.x - balls[i].dbgX)**2 + (nextPos.y - balls[i].dbgY)**2);
+		var numCollisionChecks = floor(distToNextPos / minDist) + 1;
+		var tsPerCollision = ts / numCollisionChecks;
+		for (var j = 0; j < numCollisionChecks; j++) {
 
-			// Go to previous position
-			dbgX = prevDbgX;
-			dbgY = prevDbgY;
-			var partialTs = (numCollisionChecks - i) * tsPerCollision;
+			if (collidesWithWalls(i) || collidesWithPaddles(i)) {
+				// stop = true;
 
-			nextPos = nextEndingPosition({x: dbgX, y: dbgY}, {x: dbgVelX, y: dbgVelY}, partialTs);
+				// Go to previous position
+				balls[i].dbgX = balls[i].prevDbgX;
+				balls[i].dbgY = balls[i].prevDbgY;
+				var partialTs = (numCollisionChecks - j) * tsPerCollision;
 
-			stroke(255);
-			line(collX, collY, dbgX, dbgY);
-			stroke(0, 255, 255);
-			line(collX, collY + ballWidth, dbgX, dbgY + ballWidth);
-			noStroke();
+				nextPos = nextEndingPosition({x: balls[i].dbgX, y: balls[i].dbgY}, {x: balls[i].dbgVelX, y: balls[i].dbgVelY}, partialTs);
 
-			collX = dbgX;
-			collY = dbgY;
-			i--;
+				stroke(255);
+				line(collX, collY, balls[i].dbgX, balls[i].dbgY);
+				stroke(0, 255, 255);
+				line(collX, collY + ballWidth, balls[i].dbgX, balls[i].dbgY + ballWidth);
+				noStroke();
+
+				collX = balls[i].dbgX;
+				collY = balls[i].dbgY;
+				j--;
+			}
+			nextMinPos = nextMinPosition(nextPos, {x: balls[i].dbgX, y: balls[i].dbgY}, minDist);
+
+			balls[i].prevDbgX = balls[i].dbgX;
+			balls[i].prevDbgY = balls[i].dbgY;
+			balls[i].dbgX = nextMinPos.x;
+			balls[i].dbgY = nextMinPos.y;
 		}
-		nextMinPos = nextMinPosition(nextPos, {x: dbgX, y: dbgY}, minDist);
+		balls[i].dbgX = nextPos.x;
+		balls[i].dbgY = nextPos.y;
 
-		prevDbgX = dbgX;
-		prevDbgY = dbgY;
-		dbgX = nextMinPos.x;
-		dbgY = nextMinPos.y;
-	}
-	dbgX = nextPos.x;
-	dbgY = nextPos.y;
+		stroke(255);
+		line(collX, collY, balls[i].dbgX, balls[i].dbgY);
+		stroke(0, 255, 255);
+		line(collX, collY + ballWidth, balls[i].dbgX, balls[i].dbgY + ballWidth);
+		noStroke();
 
-	stroke(255);
-	line(collX, collY, dbgX, dbgY);
-	stroke(0, 255, 255);
-	line(collX, collY + ballWidth, dbgX, dbgY + ballWidth);
-	noStroke();
-
-	// Drawings
-	highlightCollisionSurface();
-	if (showDbgMenu) {
-		drawDbgMenu();
-	}
-	else {
-		minDistSlider.style('visibility', 'hidden');	
+		// Drawings
+		highlightCollisionSurface();
+		if (showDbgMenu) {
+			drawDbgMenu();
+		}
+		else {
+			minDistSlider.style('visibility', 'hidden');	
+		}
 	}
 }
 
@@ -410,9 +373,9 @@ function mouseInObj(obj) {
 	return mouseX > obj.x && mouseX < obj.x + obj.w && mouseY > obj.y && mouseY < obj.y + obj.h;
 }
 
-function changeBallSpeed(newSpeed) {
-	balls[0].velX = newSpeed.x;
-	balls[0].velY = newSpeed.y;
+function changeBallSpeed(newSpeed, ballIdx) {
+	balls[ballIdx].velX = newSpeed.x;
+	balls[ballIdx].velY = newSpeed.y;
 }
 
 function checkDbgInteraction(kCode) {
@@ -459,12 +422,16 @@ function drawDbgMenu() {
 	text("ENTER --- Hide / Show Debug Menu", 100, 380);	
 }
 
-function dbgSaveInitialMousePos() {	
-	var ballObj = {x: balls[0].x, y: balls[0].y, w: ballWidth, h: ballWidth}; 
-	if (mouseInObj(ballObj)) {
-		mousePressBall.pressing = true;
-		mousePressBall.x = mouseX;
-		mousePressBall.y = mouseY;
+function dbgSaveInitialMousePos() {
+	for (var i = 0; i < balls.length; i++) {
+		var ballObj = {x: balls[i].x, y: balls[i].y, w: ballWidth, h: ballWidth}; 
+		if (mouseInObj(ballObj)) {
+			mousePressBall.pressing = true;
+			mousePressBall.x = mouseX;
+			mousePressBall.y = mouseY;
+			mousePressBall.ballIdx = i;
+			break;
+		}
 	}
 }
 
@@ -478,11 +445,11 @@ function dbgSaveFinalMousePos() {
 			newSpeed = {x: mouseReleaseBall.x - mousePressBall.x,
 						y: mouseReleaseBall.y - mousePressBall.y};
 
-			changeBallSpeed(newSpeed);
+			changeBallSpeed(newSpeed, mousePressBall.ballIdx);
 		}
 		else if (dbgMode === 2) {
-			balls[0].x = mouseX;
-			balls[0].y = mouseY;
+			balls[mousePressBall.ballIdx].x = mouseX;
+			balls[mousePressBall.ballIdx].y = mouseY;
 		}
 	}
 }
@@ -527,7 +494,6 @@ function mousePressed() {
 	else if (dbgMode === 3) {
 		spawnBall(mouseX, mouseY);
 	}
-
 }
 
 function mouseReleased() { 
@@ -567,7 +533,7 @@ function draw() {
 	drawBalls();
 	drawPaddles();
 
-	// visualDbg(1000);
+	visualDbg(1000);
 }
 
 module.exports = {
