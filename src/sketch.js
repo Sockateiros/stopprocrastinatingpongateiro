@@ -3,6 +3,10 @@ var prevBallX = ballX, prevBallY = ballY;
 var ballVelX = -100, ballVelY = 0;
 var ballWidth = 20;
 
+var balls = [	{x: 250, y: 200, prevX: 250, prevY: 200, velX: -100, velY: -10},
+				{x: 100, y: 100, prevX: 100, prevY: 100, velX: -100, velY: 0}
+			];
+
 var dbgX = 200, dbgY = 200;
 var prevDbgX = 200, prevDbgY = 200;
 var dbgVelX = ballVelX, dbgVelY = ballVelY;
@@ -382,6 +386,9 @@ function visualDbg(ts) {
 	if (showDbgMenu) {
 		drawDbgMenu();
 	}
+	else {
+		minDistSlider.style('visibility', 'hidden');	
+	}
 }
 
 // Obj: {x, y, w, h}
@@ -428,6 +435,7 @@ function drawDbgMenu() {
 
 	fill(255);
 	text("Min Collision Dist (currently: " + minDistSlider.value() + ")", 100, 260);
+	minDistSlider.style('visibility', 'visible');
 
 	text("SPACEBAR --- Start / Resume", 100, 300);
 
@@ -474,7 +482,7 @@ function keyPressed() {
 		}
 	} 
 
-	if (keyCode === 13) {// Enter
+	if (keyCode === 13) { // Enter
 		showDbgMenu = !showDbgMenu;
 	}
 
