@@ -104,36 +104,37 @@ function setCollidedSurface(x1, y1, x2, y2) {
 		collidedSurface.y2 = y2;
 }
 
-function collideWithWalls() {
+function collideWithWalls(ballIdx) {
 	var collided = false;
 
 	var thickness = 2;
+
 	// Collide with right wall
-	if (balls[0].x + ballWidth > canvasWidth) {
+	if (balls[ballIdx].x + ballWidth > canvasWidth) {
 		setCollidedSurface(canvasWidth - thickness, 0, thickness, canvasHeight);
 
-		balls[0].velX *= -1;
+		balls[ballIdx].velX *= -1;
 		collided = true;
 	}
 	// Collide with left wall
-	if (balls[0].x < 0) {
+	if (balls[ballIdx].x < 0) {
 		setCollidedSurface(0, 0, thickness, canvasHeight);
 
-		balls[0].velX *= -1;
+		balls[ballIdx].velX *= -1;
 		collided = true;		
 	}
 	// Collide with top wall
-	if (balls[0].y < 0) {
+	if (balls[ballIdx].y < 0) {
 		setCollidedSurface(0, 0, canvasWidth, thickness);
 
-		balls[0].velY *= -1;
+		balls[ballIdx].velY *= -1;
 		collided = true;
 	}
 	// Collide with bottom wall
-	if (balls[0].y + ballWidth > canvasHeight) {
+	if (balls[ballIdx].y + ballWidth > canvasHeight) {
 		setCollidedSurface(0, canvasHeight - thickness, canvasWidth, thickness);
 
-		balls[0].velY *= -1;
+		balls[ballIdx].velY *= -1;
 		collided = true;
 	}
 
@@ -170,7 +171,7 @@ function collidesWithWalls() {
 
 // Reflects an object in a paddle.
 // obj: {x, y, w, h, velX, velY}
-function reflectOnPaddle(intersection, obj) {
+function reflectOnPaddle(intersection, obj, ballIdx) {
 	var horizontalColisionArea = Math.min(Math.abs(intersection.right), 
 		Math.abs(intersection.left));
 
@@ -183,7 +184,7 @@ function reflectOnPaddle(intersection, obj) {
 	// Vertical surface reflection
 	if (horizontalColisionArea <= verticalColisionArea) {
 		// Collided with left surface
-		if (balls[0].x < paddleLX) {
+		if (balls[ballIdx].x < paddleLX) {
 			setCollidedSurface(paddleLX - thickness, paddleLY, thickness, paddleHeight);
 			newObj.velX = Math.abs(obj.velX) * -1;
 			newObj.x = paddleLX - obj.w - 1;
@@ -199,7 +200,7 @@ function reflectOnPaddle(intersection, obj) {
 	// Horizontal surface reflection
 	else {
 		// Collided with top
-		if (balls[0].y < paddleLY) {
+		if (balls[ballIdx].y < paddleLY) {
 			setCollidedSurface(paddleLX, paddleLY - thickness, paddleWidth, thickness);
 			newObj.velY = Math.abs(obj.velY) * -1;
 			newObj.y = paddleLY - obj.h - 1;
@@ -215,40 +216,41 @@ function reflectOnPaddle(intersection, obj) {
 	return newObj;
 }
 
-function collideWithPaddles() {
-	var rBallIntersect = balls[0].x + ballWidth - (paddleLX);
+function collideWithPaddles(ballIdx) {
+
+	var rBallIntersect = balls[ballIdx].x + ballWidth - (paddleLX);
 	if (rBallIntersect <= 0) {
 		return false;
 	}
-	var lBallIntersect = balls[0].x - (paddleLX + paddleWidth);
+	var lBallIntersect = balls[ballIdx].x - (paddleLX + paddleWidth);
 	if (lBallIntersect >= 0) {
 		return false;
 	}
-	var tBallIntersect = balls[0].y - (paddleLY + paddleHeight);
+	var tBallIntersect = balls[ballIdx].y - (paddleLY + paddleHeight);
 	if (tBallIntersect >= 0) {
 		return false;
 	}
-	var bBallIntersect = balls[0].y + ballWidth - (paddleLY);
+	var bBallIntersect = balls[ballIdx].y + ballWidth - (paddleLY);
 	if (bBallIntersect <= 0) {
 		return false;
 	}
 	
 	// Arriving here means the ball collided with a paddle
-	var obj = {x: balls[0].x, y: balls[0].y, w: ballWidth, h: ballWidth, velX: balls[0].velX, velY: balls[0].velY};
+	var obj = {x: balls[ballIdx].x, y: balls[ballIdx].y, w: ballWidth, h: ballWidth, velX: balls[ballIdx].velX, velY: balls[ballIdx].velY};
 	var newObj = reflectOnPaddle( 
 		{	right: rBallIntersect,
 			left: lBallIntersect,
 			top: tBallIntersect,
 			bottom: bBallIntersect
-		},	obj
+		},	obj, ballIdx
 		);
 
 	// balls[0].x = newObj.x;
 	// balls[0].y = newObj.y;
-	balls[0].velX = newObj.velX;
-	balls[0].velY = newObj.velY;
-	balls[0].prevX = newObj.x;
-	balls[0].prevY = newObj.y;
+	balls[ballIdx].velX = newObj.velX;
+	balls[ballIdx].velY = newObj.velY;
+	balls[ballIdx].prevX = newObj.x;
+	balls[ballIdx].prevY = newObj.y;
 	// balls[0].prevX = canvasWidth / 2;
 	// balls[0].prevY = canvasHeight / 2;
 
@@ -308,31 +310,33 @@ function nextMinPosition(nextPos, currentPos, mininumDist) {
 
 function collide(ts) {
 
-	var nextPos = nextEndingPosition({x: balls[0].x, y: balls[0].y}, {x: balls[0].velX, y: balls[0].velY}, ts);
-	var nextMinPos = nextMinPosition(nextPos, {x: balls[0].x, y: balls[0].y}, minDist);
+	for (var i = 0; i < balls.length; i++) {
+		var nextPos = nextEndingPosition({x: balls[i].x, y: balls[i].y}, {x: balls[i].velX, y: balls[i].velY}, ts);
+		var nextMinPos = nextMinPosition(nextPos, {x: balls[i].x, y: balls[i].y}, minDist);
 
-	var distToNextPos = sqrt((nextPos.x - balls[0].x)**2 + (nextPos.y - balls[0].y)**2);
-	var numCollisionChecks = floor(distToNextPos / minDist) + 1;
-	var tsPerCollision = ts / numCollisionChecks;
-	for (var i = 0; i < numCollisionChecks; i++) {
-		if (collideWithWalls() || collideWithPaddles()) {
-			balls[0].x = balls[0].prevX;
-			balls[0].y = balls[0].prevY;
+		var distToNextPos = sqrt((nextPos.x - balls[i].x)**2 + (nextPos.y - balls[i].y)**2);
+		var numCollisionChecks = floor(distToNextPos / minDist) + 1;
+		var tsPerCollision = ts / numCollisionChecks;
+		for (var j = 0; j < numCollisionChecks; j++) {
+			if (collideWithWalls(i) || collideWithPaddles(i)) {
+				balls[i].x = balls[i].prevX;
+				balls[i].y = balls[i].prevY;
 
-			var partialTs = (numCollisionChecks - i) * tsPerCollision;
-			nextPos = nextEndingPosition({x: balls[0].x, y: balls[0].y}, {x: balls[0].velX, y: balls[0].velY}, partialTs);
-			i--;
+				var partialTs = (numCollisionChecks - j) * tsPerCollision;
+				nextPos = nextEndingPosition({x: balls[i].x, y: balls[i].y}, {x: balls[i].velX, y: balls[i].velY}, partialTs);
+				j--;
+			}
+
+			nextMinPos = nextMinPosition(nextPos, {x: balls[i].x, y: balls[i].y}, minDist);
+
+			balls[i].prevX = balls[i].x;
+			balls[i].prevY = balls[i].y;
+			balls[i].x = nextMinPos.x;
+			balls[i].y = nextMinPos.y;
 		}
-
-		nextMinPos = nextMinPosition(nextPos, {x: balls[0].x, y: balls[0].y}, minDist);
-
-		balls[0].prevX = balls[0].x;
-		balls[0].prevY = balls[0].y;
-		balls[0].x = nextMinPos.x;
-		balls[0].y = nextMinPos.y;
+		balls[i].x = nextPos.x;
+		balls[i].y = nextPos.y;
 	}
-	balls[0].x = nextPos.x;
-	balls[0].y = nextPos.y;
 }
 
 function visualDbg(ts) {
@@ -544,6 +548,7 @@ function setup() {
 
 	minDistSlider = createSlider(1, 100, 20);
 	minDistSlider.position(100, 300);
+	minDistSlider.style('visibility', 'hidden');
 }
 
 // Main loop
@@ -558,11 +563,11 @@ function draw() {
 
 	if (stop === false) {
 		collide(deltaT);	
-		// moveBall(deltaT);
 	}
 	drawBalls();
 	drawPaddles();
-	visualDbg(1000);
+
+	// visualDbg(1000);
 }
 
 module.exports = {
