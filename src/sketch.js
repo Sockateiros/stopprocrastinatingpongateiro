@@ -12,10 +12,8 @@ var balls = [	{	x: 250, y: 200, prevX: 250, prevY: 200, velX: -100, velY: -10,
 // var canvasWidth = window.screen.width * window.devicePixelRatio;
 // var canvasHeight = window.screen.height * window.devicePixelRatio;
 
-var canvasWidth = 800, canvasHeight = 450;
+var canvasWidth = 800, canvasHeight = 800;
 
-var numCells = {x: canvasWidth / 50,
-				y: canvasHeight / 25};
 var minDist = 1;
 
 // Paddles
@@ -38,6 +36,8 @@ var showDbgMenu = true;
 var collidedSurface = {x1: -10, y1: -10, x2: -10, y2: -10};
 
 var minDistSlider;
+
+var checkpoints = [];
 
 function drawBalls() {
 	fill(255, 0, 0);
@@ -379,7 +379,7 @@ function changeBallSpeed(newSpeed, ballIdx) {
 }
 
 function checkDbgInteraction(kCode) {
-	if (kCode > 51 || kCode < 48) {
+	if (kCode > 53 || kCode < 48) {
 		return false;
 	}
 	dbgMode = kCode - 48;
@@ -413,13 +413,20 @@ function drawDbgMenu() {
 	fill(changeDbgMenuEntryColor(3));
 	text("3 --- Spawn ball", 100, 260);
 
+	fill(changeDbgMenuEntryColor(4));
+	text("4 --- Save checkpoint", 100, 300);
+
+	fill(changeDbgMenuEntryColor(5));
+	text("5 --- Restore last checkpoint", 100, 340);
+
 	fill(255);
-	text("Min Collision Dist (currently: " + minDistSlider.value() + ")", 100, 300);
+	text("Min Collision Dist (currently: " + minDistSlider.value() + ")", 100, 380);
 	minDistSlider.style('visibility', 'visible');
 
-	text("SPACEBAR --- Start / Resume", 100, 340);
+	text("SPACEBAR --- Start / Resume", 100, 420);
 
-	text("ENTER --- Hide / Show Debug Menu", 100, 380);	
+	text("ENTER --- Hide / Show Debug Menu", 100, 460);	
+	noFill();
 }
 
 function dbgSaveInitialMousePos() {
@@ -459,6 +466,27 @@ function spawnBall(x, y) {
 	balls.push(newBall);
 }
 
+function saveCheckpoint() {
+	// Save paddles
+	var lPaddle = {x: paddleLX, y: paddleLY};
+	var rPaddle = {x: paddleRX, y: paddleRY};
+
+	// Save balls
+	var tmpBalls = JSON.parse(JSON.stringify(balls));
+	checkpoints.push({balls: tmpBalls, paddles: [lPaddle, rPaddle]});
+}
+
+function restoreCheckpoint() {
+	var lastCheckpoint = checkpoints[checkpoints.length - 1];
+
+	// Restore paddles
+	paddleLX = lastCheckpoint.paddles[0].x;
+	paddleLY = lastCheckpoint.paddles[0].y;
+
+	// Restore balls
+	balls = lastCheckpoint.balls;
+}
+
 //
 // P5 built-in functions
 //
@@ -475,8 +503,16 @@ function keyPressed() {
 		showDbgMenu = !showDbgMenu;
 	}
 
-	if (stop) {
-		checkDbgInteraction(keyCode);
+	if (!stop) {
+		return false;
+	}
+
+	checkDbgInteraction(keyCode);
+	if (keyCode == 52) { // 4
+		saveCheckpoint();
+	}
+	else if (keyCode == 53) { // 5
+		restoreCheckpoint();
 	}
 
 	return false;
@@ -513,7 +549,7 @@ function setup() {
 	prevTs = new Date().getTime();
 
 	minDistSlider = createSlider(1, 100, 20);
-	minDistSlider.position(100, 300);
+	minDistSlider.position(100, 380);
 	minDistSlider.style('visibility', 'hidden');
 }
 
@@ -525,7 +561,9 @@ function draw() {
 	if (stop === false) {
 		calcDeltaT();
 	}
-	paddleLY = constrain(mouseY, paddleHeight/2, canvasHeight - paddleHeight/2);
+
+	var paddlePosY = constrain(mouseY, paddleHeight/2, canvasHeight - paddleHeight/2);
+	paddleLY += (paddlePosY - paddleLY) * .05;
 
 	if (stop === false) {
 		collide(deltaT);	
