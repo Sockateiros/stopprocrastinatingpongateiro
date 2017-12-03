@@ -1,25 +1,28 @@
-var ballX = 250, ballY = 200;
-var ballPrevX = ballX, ballPrevY = ballY;
-var ballVelX = -100, ballVelY = 0;
-var ballWidth = 20;
+// Maximized
+// var canvasWidth = window.screen.width * window.devicePixelRatio;
+// var canvasHeight = window.screen.height * window.devicePixelRatio;
+var canvasWidth = 800, canvasHeight = 800;
 
+var ballWidth = 20;
 var balls = [	{	x: 250, y: 200, prevX: 250, prevY: 200, velX: -100, velY: -10,
 					dbgX: 200, dbgY: 200, prevDbgX: 200, prevDbgY: 200, dbgVelX: -100, dbgVelY: -10	
 				}
 			];
 
-// Maximized
-// var canvasWidth = window.screen.width * window.devicePixelRatio;
-// var canvasHeight = window.screen.height * window.devicePixelRatio;
-
-var canvasWidth = 800, canvasHeight = 800;
-
-var minDist = 1;
-
 // Paddles
 var paddleWidth = 20, paddleHeight = 50;
-var paddleLX = 0, paddleLY = 100;
-var paddleRX = canvasWidth - paddleWidth, paddleRY = 100;
+var paddles = 	[	{x: 0, y: 100},
+					{x: canvasWidth - paddleWidth, y: 100}
+				];
+// var paddleLX = 0, paddleLY = 100;
+// var paddleRX = canvasWidth - paddleWidth, paddleRY = 100;
+// Replace:
+// paddleLX 	--->	paddles[0].x
+// paddleLY 	--->	paddles[0].y
+// paddleRX 	--->	paddles[1].x
+// paddleRY 	--->	paddles[1].y
+
+var minDist = 1;
 
 // Time
 var ts = 0;
@@ -27,6 +30,7 @@ var prevTs = 0;
 var deltaT = 0;
 
 var stop = false;
+var stepFrame = false;
 
 var mousePressBall = {x: -1, y: -1, pressing: false, ballIdx: -1};
 var mouseReleaseBall = {x: -1, y: -1};
@@ -64,12 +68,13 @@ function highlightCollisionSurface() {
 }
 
 function setCollidedSurface(x1, y1, x2, y2) {
-		collidedSurface.x1 = x1;
-		collidedSurface.x2 = x2;
-		collidedSurface.y1 = y1;
-		collidedSurface.y2 = y2;
+	collidedSurface.x1 = x1;
+	collidedSurface.x2 = x2;
+	collidedSurface.y1 = y1;
+	collidedSurface.y2 = y2;
 }
 
+// ball collision with walls
 function collideWithWalls(ballIdx) {
 	var collided = false;
 
@@ -109,8 +114,8 @@ function collideWithWalls(ballIdx) {
 
 function drawPaddles() {
 	fill(0, 255, 0);
-	rect(paddleLX, paddleLY, paddleWidth, paddleHeight);
-	rect(paddleRX, paddleRY, paddleWidth, paddleHeight);
+	rect(paddles[0].x, paddles[0].y, paddleWidth, paddleHeight);
+	rect(paddles[1].x, paddles[1].y, paddleWidth, paddleHeight);
 }
 
 function calcDeltaT() {
@@ -119,6 +124,7 @@ function calcDeltaT() {
 	prevTs = ts;
 }
 
+// dbg line collision with walls
 function collidesWithWalls(ballIdx) {
 	// Collide with left or right walls
 	if (balls[ballIdx].dbgX + ballWidth > canvasWidth || balls[ballIdx].dbgX < 0) {
@@ -150,53 +156,54 @@ function reflectOnPaddle(intersection, obj, ballIdx) {
 	// Vertical surface reflection
 	if (horizontalColisionArea <= verticalColisionArea) {
 		// Collided with left surface
-		if (obj.x < paddleLX) {
-			setCollidedSurface(paddleLX - thickness, paddleLY, thickness, paddleHeight);
+		if (obj.x < paddles[0].x) {
+			setCollidedSurface(paddles[0].x - thickness, paddles[0].y, thickness, paddleHeight);
 			newObj.velX = Math.abs(obj.velX) * -1;
-			newObj.x = paddleLX - obj.w - 1;
+			newObj.x = paddles[0].x - obj.w - 1;
 		}
 		// Collided with right surface
 		else {
-			setCollidedSurface(paddleLX + paddleWidth, paddleLY, thickness, paddleHeight);
+			setCollidedSurface(paddles[0].x + paddleWidth, paddles[0].y, thickness, paddleHeight);
 			newObj.velX = Math.abs(obj.velX);
-			newObj.x = paddleLX + paddleWidth + 1;
+			newObj.x = paddles[0].x + paddleWidth + 1;
 		}
 	}
 
 	// Horizontal surface reflection
 	else {
 		// Collided with top
-		if (obj.y < paddleLY) {
-			setCollidedSurface(paddleLX, paddleLY - thickness, paddleWidth, thickness);
+		if (obj.y < paddles[0].y) {
+			setCollidedSurface(paddles[0].x, paddles[0].y - thickness, paddleWidth, thickness);
 			newObj.velY = Math.abs(obj.velY) * -1;
-			newObj.y = paddleLY - obj.h - 1;
+			newObj.y = paddles[0].y - obj.h - 1;
 		}
 		// Collided with bottom
 		else  {
-			setCollidedSurface(paddleLX, paddleLY + paddleHeight, paddleWidth, thickness);
+			setCollidedSurface(paddles[0].x, paddles[0].y + paddleHeight, paddleWidth, thickness);
 			newObj.velY = Math.abs(obj.velY);
-			newObj.y = paddleLY + paddleHeight + 1;
+			newObj.y = paddles[0].y + paddleHeight + 1;
 		}
 	}
 
 	return newObj;
 }
 
+// ball collision with paddles
 function collideWithPaddles(ballIdx) {
 
-	var rBallIntersect = balls[ballIdx].x + ballWidth - (paddleLX);
+	var rBallIntersect = balls[ballIdx].x + ballWidth - (paddles[0].x);
 	if (rBallIntersect <= 0) {
 		return false;
 	}
-	var lBallIntersect = balls[ballIdx].x - (paddleLX + paddleWidth);
+	var lBallIntersect = balls[ballIdx].x - (paddles[0].x + paddleWidth);
 	if (lBallIntersect >= 0) {
 		return false;
 	}
-	var tBallIntersect = balls[ballIdx].y - (paddleLY + paddleHeight);
+	var tBallIntersect = balls[ballIdx].y - (paddles[0].y + paddleHeight);
 	if (tBallIntersect >= 0) {
 		return false;
 	}
-	var bBallIntersect = balls[ballIdx].y + ballWidth - (paddleLY);
+	var bBallIntersect = balls[ballIdx].y + ballWidth - (paddles[0].y);
 	if (bBallIntersect <= 0) {
 		return false;
 	}
@@ -219,20 +226,21 @@ function collideWithPaddles(ballIdx) {
 	return true;
 }
 
+// dbg line collision with paddles
 function collidesWithPaddles(ballIdx) {
-	var rBallIntersect = balls[ballIdx].dbgX + ballWidth - (paddleLX);
+	var rBallIntersect = balls[ballIdx].dbgX + ballWidth - (paddles[0].x);
 	if (rBallIntersect <= 0) {
 		return false;
 	}
-	var lBallIntersect = balls[ballIdx].dbgX - (paddleLX + paddleWidth);
+	var lBallIntersect = balls[ballIdx].dbgX - (paddles[0].x + paddleWidth);
 	if (lBallIntersect >= 0) {
 		return false;
 	}
-	var tBallIntersect = balls[ballIdx].dbgY - (paddleLY + paddleHeight);
+	var tBallIntersect = balls[ballIdx].dbgY - (paddles[0].y + paddleHeight);
 	if (tBallIntersect >= 0) {
 		return false;
 	}
-	var bBallIntersect = balls[ballIdx].dbgY + ballWidth - (paddleLY);
+	var bBallIntersect = balls[ballIdx].dbgY + ballWidth - (paddles[0].y);
 	if (bBallIntersect <= 0) {
 		return false;
 	}
@@ -423,9 +431,11 @@ function drawDbgMenu() {
 	text("Min Collision Dist (currently: " + minDistSlider.value() + ")", 100, 380);
 	minDistSlider.style('visibility', 'visible');
 
-	text("SPACEBAR --- Start / Resume", 100, 420);
+	text("UP_ARROW --- Step by frame", 100, 420);
 
-	text("ENTER --- Hide / Show Debug Menu", 100, 460);	
+	text("SPACEBAR --- Start / Resume", 100, 460);
+
+	text("ENTER --- Hide / Show Debug Menu", 100, 500);	
 	noFill();
 }
 
@@ -468,8 +478,8 @@ function spawnBall(x, y) {
 
 function saveCheckpoint() {
 	// Save paddles
-	var lPaddle = {x: paddleLX, y: paddleLY};
-	var rPaddle = {x: paddleRX, y: paddleRY};
+	var lPaddle = {x: paddles[0].x, y: paddles[0].y};
+	var rPaddle = {x: paddles[1].x, y: paddles[1].y};
 
 	// Save balls
 	var tmpBalls = JSON.parse(JSON.stringify(balls));
@@ -480,8 +490,8 @@ function restoreCheckpoint() {
 	var lastCheckpoint = checkpoints[checkpoints.length - 1];
 
 	// Restore paddles
-	paddleLX = lastCheckpoint.paddles[0].x;
-	paddleLY = lastCheckpoint.paddles[0].y;
+	paddles[0].x = lastCheckpoint.paddles[0].x;
+	paddles[0].y = lastCheckpoint.paddles[0].y;
 
 	// Restore balls
 	balls = lastCheckpoint.balls;
@@ -499,7 +509,7 @@ function keyPressed() {
 		}
 	} 
 
-	if (keyCode === 13) { // Enter
+	else if (keyCode === 13) { // Enter
 		showDbgMenu = !showDbgMenu;
 	}
 
@@ -508,11 +518,17 @@ function keyPressed() {
 	}
 
 	checkDbgInteraction(keyCode);
+
 	if (keyCode == 52) { // 4
 		saveCheckpoint();
 	}
 	else if (keyCode == 53) { // 5
 		restoreCheckpoint();
+	}
+
+	else if (keyCode === 38) { // ARROW_UP
+		stepFrame = true;
+		prevTs = new Date().getTime();
 	}
 
 	return false;
@@ -558,20 +574,22 @@ function draw() {
 	background(0);
 	minDist = minDistSlider.value();
 
-	if (stop === false) {
+	if (stop === false  || stepFrame === true) {
 		calcDeltaT();
 	}
 
 	var paddlePosY = constrain(mouseY, paddleHeight/2, canvasHeight - paddleHeight/2);
-	paddleLY += (paddlePosY - paddleLY) * .05;
+	paddles[0].y += (paddlePosY - paddles[0].y) * .05;
 
-	if (stop === false) {
+	if (stop === false || stepFrame === true) {
 		collide(deltaT);	
 	}
 	drawBalls();
 	drawPaddles();
 
 	visualDbg(1000);
+
+	stepFrame = false;
 }
 
 module.exports = {
