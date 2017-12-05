@@ -205,34 +205,41 @@ function nextMinPosition(nextPos, currentPos, mininumDist) {
 	return nextMinPos;
 }
 
+function checkCol(ts, i) {
+	var nextPos = nextEndingPosition({x: balls[i].x, y: balls[i].y}, {x: balls[i].velX, y: balls[i].velY}, ts);
+	var distToNextPos = sqrt((nextPos.x - balls[i].x)**2 + (nextPos.y - balls[i].y)**2);
+	var numCollisionChecks = floor(distToNextPos / minDist) + 1;
+
+	var tsPerCollision = ts / numCollisionChecks;
+	var nextMinPos = nextMinPosition(nextPos, {x: balls[i].x, y: balls[i].y}, minDist);
+
+	for (var j = 0; j < numCollisionChecks; j++) {
+		if (collisionWithWalls(balls[i], ballWidth, ballWidth) || collisionWithPaddles(balls[i], ballWidth, ballWidth)) {
+			balls[i].x = balls[i].prevX;
+			balls[i].y = balls[i].prevY;
+
+			var partialTs = (numCollisionChecks - j) * tsPerCollision;
+			nextPos = nextEndingPosition({x: balls[i].x, y: balls[i].y}, {x: balls[i].velX, y: balls[i].velY}, partialTs);
+			j--;
+		}
+
+		nextMinPos = nextMinPosition(nextPos, {x: balls[i].x, y: balls[i].y}, minDist);
+
+		balls[i].prevX = balls[i].x;
+		balls[i].prevY = balls[i].y;
+		balls[i].x = nextMinPos.x;
+		balls[i].y = nextMinPos.y;
+	}
+	balls[i].x = nextPos.x;
+	balls[i].y = nextPos.y;
+}
+
 function collide(ts) {
 
 	for (var i = 0; i < balls.length; i++) {
-		var nextPos = nextEndingPosition({x: balls[i].x, y: balls[i].y}, {x: balls[i].velX, y: balls[i].velY}, ts);
-		var nextMinPos = nextMinPosition(nextPos, {x: balls[i].x, y: balls[i].y}, minDist);
 
-		var distToNextPos = sqrt((nextPos.x - balls[i].x)**2 + (nextPos.y - balls[i].y)**2);
-		var numCollisionChecks = floor(distToNextPos / minDist) + 1;
-		var tsPerCollision = ts / numCollisionChecks;
-		for (var j = 0; j < numCollisionChecks; j++) {
-			if (collisionWithWalls(balls[i], ballWidth, ballWidth) || collisionWithPaddles(balls[i], ballWidth, ballWidth)) {
-				balls[i].x = balls[i].prevX;
-				balls[i].y = balls[i].prevY;
+		checkCol(ts, i);
 
-				var partialTs = (numCollisionChecks - j) * tsPerCollision;
-				nextPos = nextEndingPosition({x: balls[i].x, y: balls[i].y}, {x: balls[i].velX, y: balls[i].velY}, partialTs);
-				j--;
-			}
-
-			nextMinPos = nextMinPosition(nextPos, {x: balls[i].x, y: balls[i].y}, minDist);
-
-			balls[i].prevX = balls[i].x;
-			balls[i].prevY = balls[i].y;
-			balls[i].x = nextMinPos.x;
-			balls[i].y = nextMinPos.y;
-		}
-		balls[i].x = nextPos.x;
-		balls[i].y = nextPos.y;
 	}
 }
 
@@ -399,7 +406,9 @@ function dbgSaveFinalMousePos() {
 }
 
 function spawnBall(x, y) {
-	var newBall = {x: x, y: y, prevX: 100, prevY: 100, velX: -100, velY: 0};
+	var newBall = 	{	x: x, y: y, prevX: x, prevY: y, velX: -100, velY: 0,
+						dbg: {x: x, y: y, prevX: x, prevY: y, velX: -100, velY: 0}
+					};
 	balls.push(newBall);
 }
 
