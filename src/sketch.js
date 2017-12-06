@@ -1,7 +1,6 @@
 // TO-DO
 // . Add id, w, h to balls and paddles
 
-
 // Maximized
 // var canvasWidth = window.screen.width * window.devicePixelRatio;
 // var canvasHeight = window.screen.height * window.devicePixelRatio;
@@ -205,41 +204,55 @@ function nextMinPosition(nextPos, currentPos, mininumDist) {
 	return nextMinPos;
 }
 
-function checkCol(ts, i) {
-	var nextPos = nextEndingPosition({x: balls[i].x, y: balls[i].y}, {x: balls[i].velX, y: balls[i].velY}, ts);
-	var distToNextPos = sqrt((nextPos.x - balls[i].x)**2 + (nextPos.y - balls[i].y)**2);
-	var numCollisionChecks = floor(distToNextPos / minDist) + 1;
 
+function hasCollided(ball) {
+	return collisionWithWalls(ball, ballWidth, ballWidth) || collisionWithPaddles(ball, ballWidth, ballWidth);
+}
+
+function nextBallPosAfterCollision(ball, ts) {
+	ball.x = ball.prevX;
+	ball.y = ball.prevY;
+
+	return nextEndingPosition({x: ball.x, y: ball.y}, {x: ball.velX, y: ball.velY}, ts);
+}
+
+function stepBallPosition(ball, nextPos) {
+	var nextMinPos = nextMinPosition(nextPos, {x: ball.x, y: ball.y}, minDist);
+
+	ball.prevX = ball.x;
+	ball.prevY = ball.y;
+	ball.x = nextMinPos.x;
+	ball.y = nextMinPos.y;
+}
+
+function manageBallCollision(ts, idxBall, numCollisionChecks, nextPos) {
+
+	// . Check collisions between the current ball position and the
+	// next ending position (if there are no collisions) 
+	// . If there is a collision, a new ending position is 
+	// calculated (<nextPos>)
 	var tsPerCollision = ts / numCollisionChecks;
-	var nextMinPos = nextMinPosition(nextPos, {x: balls[i].x, y: balls[i].y}, minDist);
-
 	for (var j = 0; j < numCollisionChecks; j++) {
-		if (collisionWithWalls(balls[i], ballWidth, ballWidth) || collisionWithPaddles(balls[i], ballWidth, ballWidth)) {
-			balls[i].x = balls[i].prevX;
-			balls[i].y = balls[i].prevY;
-
+		if (hasCollided(balls[idxBall])) {
 			var partialTs = (numCollisionChecks - j) * tsPerCollision;
-			nextPos = nextEndingPosition({x: balls[i].x, y: balls[i].y}, {x: balls[i].velX, y: balls[i].velY}, partialTs);
+			nextPos = nextBallPosAfterCollision(balls[idxBall], partialTs);
 			j--;
 		}
 
-		nextMinPos = nextMinPosition(nextPos, {x: balls[i].x, y: balls[i].y}, minDist);
-
-		balls[i].prevX = balls[i].x;
-		balls[i].prevY = balls[i].y;
-		balls[i].x = nextMinPos.x;
-		balls[i].y = nextMinPos.y;
+		stepBallPosition(balls[idxBall], nextPos);
 	}
-	balls[i].x = nextPos.x;
-	balls[i].y = nextPos.y;
+	balls[idxBall].x = nextPos.x;
+	balls[idxBall].y = nextPos.y;
 }
 
 function collide(ts) {
 
 	for (var i = 0; i < balls.length; i++) {
+		var nextPos = nextEndingPosition({x: balls[i].x, y: balls[i].y}, {x: balls[i].velX, y: balls[i].velY}, ts);
+		var distToNextPos = sqrt((nextPos.x - balls[i].x)**2 + (nextPos.y - balls[i].y)**2);
+		var numCollisionChecks = floor(distToNextPos / minDist) + 1;
 
-		checkCol(ts, i);
-
+		manageBallCollision(ts, i, numCollisionChecks, nextPos);
 	}
 }
 
@@ -263,15 +276,17 @@ function visualDbg(ts) {
 		var distToNextPos = sqrt((nextPos.x - balls[i].dbg.x)**2 + (nextPos.y - balls[i].dbg.y)**2);
 		var numCollisionChecks = floor(distToNextPos / minDist) + 1;
 		var tsPerCollision = ts / numCollisionChecks;
+		
+		// . Check collisions between the current ball position and the
+		// next ending position (if there are no collisions) 
+		// . If there is a collision, a new ending position is 
+		// calculated (<nextPos>)
 		for (var j = 0; j < numCollisionChecks; j++) {
 
-			if (collisionWithWalls(balls[i].dbg, ballWidth, ballWidth) || collisionWithPaddles(balls[i].dbg, ballWidth, ballWidth)) {
-				// Go to previous position
-				balls[i].dbg.x = balls[i].dbg.prevX;
-				balls[i].dbg.y = balls[i].dbg.prevY;
+			if (hasCollided(balls[i].dbg)) {
 				var partialTs = (numCollisionChecks - j) * tsPerCollision;
 
-				nextPos = nextEndingPosition({x: balls[i].dbg.x, y: balls[i].dbg.y}, {x: balls[i].dbg.velX, y: balls[i].dbg.velY}, partialTs);
+				nextPos = nextBallPosAfterCollision(balls[i].dbg, partialTs);
 
 				stroke(255);
 				line(collX, collY, balls[i].dbg.x, balls[i].dbg.y);
@@ -283,12 +298,7 @@ function visualDbg(ts) {
 				collY = balls[i].dbg.y;
 				j--;
 			}
-			nextMinPos = nextMinPosition(nextPos, {x: balls[i].dbg.x, y: balls[i].dbg.y}, minDist);
-
-			balls[i].dbg.prevX = balls[i].dbg.x;
-			balls[i].dbg.prevY = balls[i].dbg.y;
-			balls[i].dbg.x = nextMinPos.x;
-			balls[i].dbg.y = nextMinPos.y;
+			stepBallPosition(balls[i].dbg, nextPos);
 		}
 		balls[i].dbg.x = nextPos.x;
 		balls[i].dbg.y = nextPos.y;
@@ -500,7 +510,7 @@ function setup() {
 	createCanvas(canvasWidth, canvasHeight);
 	prevTs = new Date().getTime();
 
-	minDistSlider = createSlider(1, 100, 20);
+	minDistSlider = createSlider(1, 100, 1);
 	minDistSlider.position(100, 380);
 	minDistSlider.style('visibility', 'hidden');
 }
