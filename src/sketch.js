@@ -483,13 +483,10 @@ function dbgSaveInitialMousePos() {
 
 function dbgSaveFinalMousePos() {
 	if (mousePressBall.pressing === true) {
-		mousePressBall.pressing = false;
-		mouseReleaseBall.x = mouseX;
-		mouseReleaseBall.y = mouseY;
 
 		if (dbgMode === 1) {
-			newSpeed = {x: mouseReleaseBall.x - mousePressBall.x,
-						y: mouseReleaseBall.y - mousePressBall.y};
+			newSpeed = {x: mouseX - mousePressBall.x,
+						y: mouseY - mousePressBall.y};
 
 			changeBallSpeed(newSpeed, mousePressBall.ballIdx);
 		}
@@ -581,13 +578,23 @@ function mousePressed() {
 	}
 }
 
+function mouseDragged() {
+	if (stop === false) {
+		return false;
+	}
+
+	if (dbgMode === 1 || dbgMode === 2) {
+		dbgSaveFinalMousePos();
+	}
+}
+
 function mouseReleased() { 
 	if (stop === false) {
 		return false;
 	}
-	
-	if (dbgMode === 1 || dbgMode === 2) {
-		dbgSaveFinalMousePos();
+		
+	if (mousePressBall.pressing === true) {
+		mousePressBall.pressing = false;
 	}
 
 	return false;
