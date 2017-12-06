@@ -72,8 +72,9 @@ function setCollidedSurface(x1, y1, x2, y2) {
 
 function drawPaddles() {
 	fill(0, 255, 0);
-	rect(paddles[0].x, paddles[0].y, paddleWidth, paddleHeight);
-	rect(paddles[1].x, paddles[1].y, paddleWidth, paddleHeight);
+	for (var i = 0; i < paddles.length; i++) {
+		rect(paddles[i].x, paddles[i].y, paddleWidth, paddleHeight);
+	}
 }
 
 function calcDeltaT() {
@@ -118,38 +119,46 @@ function collisionWithWalls(obj, objW, objH) {
 
 // Object <obj> collision with paddles
 function collisionWithPaddles(obj, objW, objH) {
-	var rBallIntersect = obj.x + objW - (paddles[0].x);
-	if (rBallIntersect <= 0) {
-		return false;
-	}
-	var lBallIntersect = obj.x - (paddles[0].x + paddleWidth);
-	if (lBallIntersect >= 0) {
-		return false;
-	}
-	var tBallIntersect = obj.y - (paddles[0].y + paddleHeight);
-	if (tBallIntersect >= 0) {
-		return false;
-	}
-	var bBallIntersect = obj.y + objH - (paddles[0].y);
-	if (bBallIntersect <= 0) {
-		return false;
-	}
+
+	var collided = false;
+
+	for (var i = 0; i < paddles.length; i++) {
 	
-	// Arriving here means the dbg line collided with a paddle
-	reflectOnPaddle( 
-		{	right: rBallIntersect,
-			left: lBallIntersect,
-			top: tBallIntersect,
-			bottom: bBallIntersect
-		},	obj, objW, objH
+		var rBallIntersect = obj.x + objW - (paddles[i].x);
+		if (rBallIntersect <= 0) {
+			continue;
+		}
+		var lBallIntersect = obj.x - (paddles[i].x + paddleWidth);
+		if (lBallIntersect >= 0) {
+			continue;
+		}
+		var tBallIntersect = obj.y - (paddles[i].y + paddleHeight);
+		if (tBallIntersect >= 0) {
+			continue;
+		}
+		var bBallIntersect = obj.y + objH - (paddles[i].y);
+		if (bBallIntersect <= 0) {
+			continue;
+		}
+		
+		// Arriving here means the dbg line collided with a paddle
+		collided = true;
+		
+		reflectOnPaddle(paddles[i], 
+			{	right: rBallIntersect,
+				left: lBallIntersect,
+				top: tBallIntersect,
+				bottom: bBallIntersect
+			},	obj, objW, objH
 		);
-	
-	return true;
+	}
+
+	return collided;
 }
 
 // Reflects an object in a paddle.
 // obj: {x, y, velX, velY}
-function reflectOnPaddle(intersection, obj, objW, objH) {
+function reflectOnPaddle(paddle, intersection, obj, objW, objH) {
 	var horizontalColisionArea = Math.min(Math.abs(intersection.right), 
 		Math.abs(intersection.left));
 
@@ -161,32 +170,32 @@ function reflectOnPaddle(intersection, obj, objW, objH) {
 	// Vertical surface reflection
 	if (horizontalColisionArea <= verticalColisionArea) {
 		// Collided with left surface
-		if (obj.x < paddles[0].x) {
-			setCollidedSurface(paddles[0].x - thickness, paddles[0].y, thickness, paddleHeight);
+		if (obj.x < paddle.x) {
+			setCollidedSurface(paddle.x - thickness, paddle.y, thickness, paddleHeight);
 			obj.velX = Math.abs(obj.velX) * -1;
-			obj.prevX = paddles[0].x - objW - 1;
+			obj.prevX = paddle.x - objW - 1;
 		}
 		// Collided with right surface
 		else {
-			setCollidedSurface(paddles[0].x + paddleWidth, paddles[0].y, thickness, paddleHeight);
+			setCollidedSurface(paddle.x + paddleWidth, paddle.y, thickness, paddleHeight);
 			obj.velX = Math.abs(obj.velX);
-			obj.prevX = paddles[0].x + paddleWidth + 1;
+			obj.prevX = paddle.x + paddleWidth + 1;
 		}
 	}
 
 	// Horizontal surface reflection
 	else {
 		// Collided with top
-		if (obj.y < paddles[0].y) {
-			setCollidedSurface(paddles[0].x, paddles[0].y - thickness, paddleWidth, thickness);
+		if (obj.y < paddle.y) {
+			setCollidedSurface(paddle.x, paddle.y - thickness, paddleWidth, thickness);
 			obj.velY = Math.abs(obj.velY) * -1;
-			obj.prevY = paddles[0].y - objH - 1;
+			obj.prevY = paddle.y - objH - 1;
 		}
 		// Collided with bottom
 		else  {
-			setCollidedSurface(paddles[0].x, paddles[0].y + paddleHeight, paddleWidth, thickness);
+			setCollidedSurface(paddle.x, paddle.y + paddleHeight, paddleWidth, thickness);
 			obj.velY = Math.abs(obj.velY);
-			obj.prevY = paddles[0].y + paddleHeight + 1;
+			obj.prevY = paddle.y + paddleHeight + 1;
 		}
 	}
 }
@@ -527,6 +536,12 @@ function restoreCheckpoint() {
 	balls = lastCheckpoint.balls;
 }
 
+function movePaddles() {
+	for (var i = 0; i < paddles.length; i++) {
+		paddles[i].y = constrain(mouseY, paddleHeight/2, canvasHeight - paddleHeight/2);
+	}
+}
+
 //
 // P5 built-in functions
 //
@@ -619,8 +634,7 @@ function draw() {
 		calcDeltaT();
 	}
 
-	var paddlePosY = constrain(mouseY, paddleHeight/2, canvasHeight - paddleHeight/2);
-	paddles[0].y += (paddlePosY - paddles[0].y) * .05;
+	movePaddles();
 
 	if (stop === false || stepFrame === true) {
 		collide(deltaT);	
