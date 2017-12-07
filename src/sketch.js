@@ -7,9 +7,21 @@ var canvasHeight = window.screen.height * window.devicePixelRatio;
 // var canvasWidth = 800, canvasHeight = 800;
 
 var ballWidth = 20;
-var balls = [	{	x: 100, y: 100, prevX: 250, prevY: 200, velX: 100, velY: 0,
-					dbg: {x: 200, y: 200, prevX: 200, prevY: 200, velX: -100, velY: -10}	
-				}
+var balls = [	{	x: 100, y: 100, prevX: 250, prevY: 200, velX: 100, velY: 0, prevVelX: 100, prevVelY: 0,
+					dbg: {x: 200, y: 200, prevX: 200, prevY: 200, velX: -100, velY: -10, prevVelX: 100, prevVelY: 0}	
+				},
+				{	x: 200, y: 100, prevX: 250, prevY: 200, velX: -200, velY: 0, prevVelX: 100, prevVelY: 0,
+					dbg: {x: 200, y: 200, prevX: 200, prevY: 200, velX: -100, velY: -10, prevVelX: 100, prevVelY: 0}	
+				}/*,
+				{	x: 150, y: 50, prevX: 250, prevY: 200, velX: 0, velY: 100, prevVelX: 100, prevVelY: 0,
+					dbg: {x: 200, y: 200, prevX: 200, prevY: 200, velX: -100, velY: -10, prevVelX: 100, prevVelY: 0}	
+				},
+				{	x: 150, y: 150, prevX: 250, prevY: 200, velX: 0, velY: -100, prevVelX: 100, prevVelY: 0,
+					dbg: {x: 200, y: 200, prevX: 200, prevY: 200, velX: -100, velY: -10, prevVelX: 100, prevVelY: 0}	
+				},
+				{	x: 150, y: 100, prevX: 250, prevY: 200, velX: 0, velY: 0, prevVelX: 100, prevVelY: 0,
+					dbg: {x: 200, y: 200, prevX: 200, prevY: 200, velX: -100, velY: -10, prevVelX: 100, prevVelY: 0}	
+				}	*/			
 			];
 
 // Paddles
@@ -38,6 +50,8 @@ var collidedSurface = {x1: -10, y1: -10, x2: -10, y2: -10};
 var minDistSlider;
 
 var checkpoints = [];
+
+var nC = 0;
 
 function drawBalls() {
 	fill(255, 0, 0);
@@ -213,6 +227,38 @@ function nextMinPosition(nextPos, obj, mininumDist) {
 	return nextMinPos;
 }
 
+// <obj> collision with <ball>
+function collisionWithBall(obj, objW, objH, ball) {
+	var rBallIntersect = obj.x + objW - (ball.x);
+	if (rBallIntersect <= 0) {
+		return false;
+	}
+	var lBallIntersect = obj.x - (ball.x + objW);
+	if (lBallIntersect >= 0) {
+		return false;
+	}
+	var tBallIntersect = obj.y - (ball.y + objH);
+	if (tBallIntersect >= 0) {
+		return false;
+	}
+	var bBallIntersect = obj.y + objH - (ball.y);
+	if (bBallIntersect <= 0) {
+		return false;
+	}
+	
+	// Arriving here means the ball collided with another ball
+	reflectOnBall( 
+		{	right: rBallIntersect,
+			left: lBallIntersect,
+			top: tBallIntersect,
+			bottom: bBallIntersect
+		},	obj, objW, objH, ball
+		);
+	
+	return true;
+}
+
+
 function collisionWithBalls(objIdx, objW, objH) {
 	var ball = balls[objIdx];
 	for (var i = 0; i < balls.length; i++) {
@@ -222,9 +268,9 @@ function collisionWithBalls(objIdx, objW, objH) {
 	}
 }
 
-// Obj collision with obj2
-// To-do: Change obj2 vel
-function reflectOnBall(intersection, obj, objW, objH, obj2) {
+// Obj collision with ball
+// To-do: Change ball vel
+function reflectOnBall(intersection, obj, objW, objH, ball) {
 	var horizontalColisionArea = Math.min(Math.abs(intersection.right), 
 		Math.abs(intersection.left));
 
@@ -237,64 +283,38 @@ function reflectOnBall(intersection, obj, objW, objH, obj2) {
 	// Vertical surface reflection
 	if (horizontalColisionArea <= verticalColisionArea) {
 		// Collided with left surface
-		if (obj.x < obj2.x) {
-			setCollidedSurface(obj2.x - thickness, obj2.y, thickness, objH);
+		if (obj.x < ball.x) {
+			setCollidedSurface(ball.x - thickness, ball.y, thickness, objH);
 			obj.velX = Math.abs(obj.velX) * -1;
-			obj.prevX = obj2.x - objW - 1;
+			obj.prevX = ball.x - objW - 1;
 		}
 		// Collided with right surface
 		else {
-			setCollidedSurface(obj2.x + objW, obj2.y, thickness, objH);
+			setCollidedSurface(ball.x + objW, ball.y, thickness, objH);
 			obj.velX = Math.abs(obj.velX);
-			obj.prevX = obj2.x + objW + 1;
+			obj.prevX = ball.x + objW + 1;
 		}
+		nC +=1;
+		// console.log(obj.x, obj.velX, ball.prevVelX);
+		// obj.velX = ball.prevVelX;
+		// obj.velY = obj.velY + ball.prevVelY;
 	}
 
 	// Horizontal surface reflection
 	else {
 		// Collided with top
-		if (obj.y < obj2.y) {
-			setCollidedSurface(obj2.x, obj2.y - thickness, objW, thickness);
+		if (obj.y < ball.y) {
+			setCollidedSurface(ball.x, ball.y - thickness, objW, thickness);
 			obj.velY = Math.abs(obj.velY) * -1;
-			obj.prevY = obj2.y - objH - 1;
+			obj.prevY = ball.y - objH - 1;
 		}
 		// Collided with bottom
 		else  {
-			setCollidedSurface(obj2.x, obj2.y + objH, objW, thickness);
+			setCollidedSurface(ball.x, ball.y + objH, objW, thickness);
 			obj.velY = Math.abs(obj.velY);
-			obj.prevY = obj2.y + objH + 1;
+			obj.prevY = ball.y + objH + 1;
 		}
 	}
-}
-
-function collisionWithBall(obj, objW, objH, obj2) {
-	var rBallIntersect = obj.x + objW - (obj2.x);
-	if (rBallIntersect <= 0) {
-		return false;
-	}
-	var lBallIntersect = obj.x - (obj2.x + objW);
-	if (lBallIntersect >= 0) {
-		return false;
-	}
-	var tBallIntersect = obj.y - (obj2.y + objH);
-	if (tBallIntersect >= 0) {
-		return false;
-	}
-	var bBallIntersect = obj.y + objH - (obj2.y);
-	if (bBallIntersect <= 0) {
-		return false;
-	}
-	
-	// Arriving here means the ball collided with another ball
-	reflectOnBall( 
-		{	right: rBallIntersect,
-			left: lBallIntersect,
-			top: tBallIntersect,
-			bottom: bBallIntersect
-		},	obj, objW, objH, obj2
-		);
-	
-	return true;
 }
 
 function hasCollided(ball, i) {
@@ -324,8 +344,10 @@ function manageBallCollision(ts, idxBall, numCollisionChecks, nextPos) {
 	// . If there is a collision, a new ending position is 
 	// calculated (<nextPos>)
 	var tsPerCollision = ts / numCollisionChecks;
-	for (var j = 0; j < numCollisionChecks; j++) {
-		if (hasCollided(balls[idxBall], idxBall)) {
+	var collided = false;
+	for (var j = 0; j < numCollisionChecks && !collided; j++) {
+		var collided = hasCollided(balls[idxBall], idxBall);
+		if (collided) {
 			var partialTs = (numCollisionChecks - j) * tsPerCollision;
 			nextPos = nextBallPosAfterCollision(balls[idxBall], partialTs);
 			j--;
@@ -542,6 +564,13 @@ function movePaddles() {
 	}
 }
 
+function updateBallVel() {
+	for (var i = 0; i < balls.length; i++) {
+		balls[i].prevVelX = balls[i].velX;
+		balls[i].prevVelY = balls[i].velY;
+	}
+}
+
 //
 // P5 built-in functions
 //
@@ -639,10 +668,13 @@ function draw() {
 	if (stop === false || stepFrame === true) {
 		collide(deltaT);	
 	}
+	// visualDbg(1000);
+
+	updateBallVel();
+
 	drawBalls();
 	drawPaddles();
 
-	visualDbg(1000);
 
 	stepFrame = false;
 }
